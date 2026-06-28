@@ -1,0 +1,23 @@
+# Python virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Streamlit secrets (crucial to avoid leaks)
+.streamlit/secrets.toml
+
+# Environment variables
+.env
+.env.local
+
+# Python caches and compiled bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
