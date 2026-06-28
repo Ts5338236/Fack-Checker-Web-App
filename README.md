@@ -147,3 +147,6 @@ To deploy this application to Streamlit Community Cloud:
 * **Claim Capping**: Capped at 15 claims per document to prevent high rate-limiting costs and long evaluation delays.
 * **Language Support**: Designed primarily for English documents and search indexes.
 * **Text-based PDFs only**: Scanned/scraped images require pre-processing (OCR) which is not supported in the MVP.
+
+## Deployed APP URL
+https://fack-checker-web-app.streamlit.app/
