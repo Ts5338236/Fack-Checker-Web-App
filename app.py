@@ -3,7 +3,7 @@ import io
 import csv
 import logging
 import streamlit as st
-import anthropic
+import openai
 from dotenv import load_dotenv
 
 from extractor import extract_text_from_pdf, extract_claims
@@ -131,34 +131,34 @@ st.markdown("""
 
 # Helper to fetch API keys securely
 def get_api_keys():
-    # Try st.secrets
-    anthropic_key = None
+    openai_key = None
     tavily_key = None
     
+    # Try st.secrets
     if hasattr(st, "secrets"):
-        anthropic_key = st.secrets.get("ANTHROPIC_API_KEY")
+        openai_key = st.secrets.get("OPENAI_API_KEY")
         tavily_key = st.secrets.get("TAVILY_API_KEY")
         
     # Fallback to os.environ
-    if not anthropic_key:
-        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not openai_key:
+        openai_key = os.environ.get("OPENAI_API_KEY")
     if not tavily_key:
         tavily_key = os.environ.get("TAVILY_API_KEY")
         
-    return anthropic_key, tavily_key
+    return openai_key, tavily_key
 
-anthropic_key_secret, tavily_key_secret = get_api_keys()
+openai_key_secret, tavily_key_secret = get_api_keys()
 
 # Sidebar Setup
 with st.sidebar:
     st.markdown("### 🛠️ Configuration")
     
     # Allow user override if not set in secrets
-    anthropic_key_input = st.text_input(
-        "Anthropic API Key", 
-        value=anthropic_key_secret or "", 
+    openai_key_input = st.text_input(
+        "OpenAI API Key", 
+        value=openai_key_secret or "", 
         type="password",
-        help="Required for claim extraction and verdict reasoning (Claude 3.5 Haiku)."
+        help="Required for claim extraction and verdict reasoning (GPT-4o Mini)."
     )
     tavily_key_input = st.text_input(
         "Tavily API Key", 
@@ -168,7 +168,7 @@ with st.sidebar:
     )
     
     # Save active keys
-    active_anthropic_key = anthropic_key_input.strip()
+    active_openai_key = openai_key_input.strip()
     active_tavily_key = tavily_key_input.strip()
     
     st.markdown("---")
@@ -177,11 +177,11 @@ with st.sidebar:
     1. **PDF Text Extraction**  
        Extracts paragraphs and technical assertions page-by-page.
     2. **Factual Claim Discovery**  
-       Claude filters text for checkable stats, dates, financials, and technical specifications.
+       GPT-4o Mini filters text for checkable stats, dates, finances, and technical specifications.
     3. **Live Web Check**  
        Each claim is searched on Tavily to capture top search results.
     4. **Verdict Evaluation**  
-       Claude cross-references findings to grade the claim as Verified, Inaccurate, or False.
+       GPT-4o Mini cross-references findings to grade the claim as Verified, Inaccurate, or False.
     """)
     
     st.markdown("---")
@@ -197,11 +197,11 @@ uploaded_file = st.file_uploader("Upload a marketing one-pager, PDF report, or b
 
 if uploaded_file is not None:
     # Key validation
-    if not active_anthropic_key or not active_tavily_key:
+    if not active_openai_key or not active_tavily_key:
         st.error("🔑 API keys are missing. Please enter them in the sidebar or configure `secrets.toml` to proceed.")
     else:
-        # Initialize Anthropic Client
-        llm_client = anthropic.Anthropic(api_key=active_anthropic_key)
+        # Initialize OpenAI Client
+        llm_client = openai.OpenAI(api_key=active_openai_key)
         
         # Main verification flow container
         st.markdown("### ⚙️ Verification Pipeline")

@@ -43,7 +43,7 @@ def get_verdict(
     claim: Claim, 
     search_results: List[SearchResult], 
     llm_client, 
-    model: str = "claude-3-5-haiku-20241022"
+    model: str = "gpt-4o-mini"
 ) -> Verdict:
     """
     Evaluates a claim's veracity against search results using Claude.

@@ -29,7 +29,7 @@ def extract_text_from_pdf(file) -> str:
     return "\n\n".join(text_content).strip()
 
 
-def extract_claims(document_text: str, llm_client, model: str = "claude-3-5-haiku-20241022", max_claims: int = 15) -> List[Claim]:
+def extract_claims(document_text: str, llm_client, model: str = "gpt-4o-mini", max_claims: int = 15) -> List[Claim]:
     """
     Splits the document text into chunks, calls Claude to extract claims,
     and returns a deduplicated list of claims capped at max_claims.

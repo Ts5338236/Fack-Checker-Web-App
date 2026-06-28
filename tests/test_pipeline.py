@@ -1,16 +1,15 @@
 import pytest
 from unittest.mock import MagicMock
-from models import Claim, Verdict, ClaimsList
+from models import Claim, Verdict
 from extractor import extract_claims
 from verifier import get_verdict
-from utils import call_llm_with_retry
 
 def test_extract_claims_success():
-    # Setup mock LLM response
+    # Setup mock OpenAI client response
     mock_client = MagicMock()
-    mock_message = MagicMock()
-    mock_message.content = [
-        MagicMock(text="""
+    mock_response = MagicMock()
+    mock_response.choices = [
+        MagicMock(message=MagicMock(content="""
         {
           "claims": [
             {
@@ -21,9 +20,9 @@ def test_extract_claims_success():
             }
           ]
         }
-        """)
+        """))
     ]
-    mock_client.messages.create.return_value = mock_message
+    mock_client.chat.completions.create.return_value = mock_response
     
     # Run
     document_text = "AcmeTech has over 500 million active enterprise clients globally."
@@ -37,15 +36,17 @@ def test_extract_claims_success():
 
 
 def test_extract_claims_malformed_json_triggers_repair():
-    # Setup mock LLM where the first response is malformed, second is repaired
+    # Setup mock OpenAI client where first call returns malformed JSON, second is repaired
     mock_client = MagicMock()
     
     malformed_response = MagicMock()
-    malformed_response.content = [MagicMock(text='{"claims": [{"claim_text": "broken JSON due to unexpected EOF')]
+    malformed_response.choices = [
+        MagicMock(message=MagicMock(content='{"claims": [{"claim_text": "broken JSON due to unexpected EOF'))
+    ]
     
     repaired_response = MagicMock()
-    repaired_response.content = [
-        MagicMock(text="""
+    repaired_response.choices = [
+        MagicMock(message=MagicMock(content="""
         {
           "claims": [
             {
@@ -56,29 +57,28 @@ def test_extract_claims_malformed_json_triggers_repair():
             }
           ]
         }
-        """)
+        """))
     ]
     
-    # First call is the main extraction (malformed JSON), second is the JSON repair prompt call
-    mock_client.messages.create.side_effect = [malformed_response, repaired_response]
+    # First call is main extraction, second is repair completions call
+    mock_client.chat.completions.create.side_effect = [malformed_response, repaired_response]
     
     # Run
     document_text = "AcmeTech has over 500 million active enterprise clients globally."
     claims = extract_claims(document_text, llm_client=mock_client, max_claims=5)
     
-    # Assertions - it should successfully recover and return the parsed claim
+    # Assertions
     assert len(claims) == 1
     assert claims[0].claim_text == "AcmeTech has over 500 million active enterprise clients"
-    # Ensure client was called twice (once for initial parse, once for repair)
-    assert mock_client.messages.create.call_count == 2
+    assert mock_client.chat.completions.create.call_count == 2
 
 
 def test_get_verdict_schema_validation():
-    # Setup mock LLM verdict response
+    # Setup mock OpenAI verdict response
     mock_client = MagicMock()
-    mock_message = MagicMock()
-    mock_message.content = [
-        MagicMock(text="""
+    mock_response = MagicMock()
+    mock_response.choices = [
+        MagicMock(message=MagicMock(content="""
         {
           "verdict": "False",
           "confidence": "High",
@@ -86,9 +86,9 @@ def test_get_verdict_schema_validation():
           "explanation": "No public acquisition records exist, and Apple did not acquire AcmeTech in June 2025.",
           "sources": ["https://www.apple.com/newsroom/"]
         }
-        """)
+        """))
     ]
-    mock_client.messages.create.return_value = mock_message
+    mock_client.chat.completions.create.return_value = mock_response
     
     claim = Claim(
         claim_text="AcmeTech was acquired by Apple Inc. for $150 billion",

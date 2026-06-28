@@ -4,7 +4,7 @@ import time
 import logging
 from typing import List, Any, Type, Optional
 from pydantic import BaseModel, ValidationError
-import anthropic
+import openai
 from prompts import JSON_REPAIR_SYSTEM, JSON_REPAIR_USER
 
 logger = logging.getLogger(__name__)
@@ -77,19 +77,21 @@ def strip_json_fences(text: str) -> str:
     return text.strip()
 
 
-def repair_json_content(raw_text: str, error_msg: str, llm_client, model: str = "claude-3-5-haiku-20241022") -> str:
+def repair_json_content(raw_text: str, error_msg: str, llm_client, model: str = "gpt-4o-mini") -> str:
     """
-    Call Claude to fix a malformed JSON string.
+    Call OpenAI to fix a malformed JSON string.
     """
     try:
         user_prompt = JSON_REPAIR_USER.format(malformed_text=raw_text, error_message=error_msg)
-        response = llm_client.messages.create(
+        response = llm_client.chat.completions.create(
             model=model,
-            max_tokens=4000,
-            system=JSON_REPAIR_SYSTEM,
-            messages=[{"role": "user", "content": user_prompt}]
+            messages=[
+                {"role": "system", "content": JSON_REPAIR_SYSTEM},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.0
         )
-        repaired = strip_json_fences(response.content[0].text)
+        repaired = strip_json_fences(response.choices[0].message.content)
         return repaired
     except Exception as e:
         logger.error(f"Failed to repair JSON with LLM: {e}")
@@ -105,7 +107,7 @@ def call_llm_with_retry(
     retries: int = 2
 ) -> Any:
     """
-    Call Anthropic Claude API with exponential backoff on rate limits and transient errors.
+    Call OpenAI Chat Completions API with exponential backoff on rate limits and transient errors.
     If expected_type is a Pydantic model, parses and validates JSON response, with a repair loop.
     """
     delay = 1.0
@@ -113,13 +115,21 @@ def call_llm_with_retry(
     
     for attempt in range(retries + 1):
         try:
-            response = llm_client.messages.create(
-                model=model,
-                max_tokens=4000,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}]
-            )
-            raw_text = response.content[0].text
+            # Prepare API arguments
+            kwargs = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.0
+            }
+            # Enforce JSON mode if we expect a structured type
+            if expected_type is not None:
+                kwargs["response_format"] = {"type": "json_object"}
+                
+            response = llm_client.chat.completions.create(**kwargs)
+            raw_text = response.choices[0].message.content
             clean_text = strip_json_fences(raw_text)
             
             if expected_type is None:
@@ -140,7 +150,7 @@ def call_llm_with_retry(
                     logger.error(f"Repair attempt failed: {repair_err}")
                     raise parse_err
                     
-        except anthropic.RateLimitError as rate_err:
+        except openai.RateLimitError as rate_err:
             last_error = rate_err
             if attempt < retries:
                 logger.warning(f"Rate limit hit. Retrying in {delay}s...")
