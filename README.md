@@ -124,7 +124,7 @@ To deploy this application to Streamlit Community Cloud:
    git add .
    git commit -m "Initial commit of Fact-Check Agent"
    # Create a public repository on GitHub, then link and push:
-   git remote add origin <your-github-repo-url>
+   git remote add origin https://github.com/Ts5338236/Fack-Checker-Web-App.git
    git branch -M main
    git push -u origin main
    ```
