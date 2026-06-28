@@ -151,25 +151,9 @@ openai_key_secret, tavily_key_secret = get_api_keys()
 
 # Sidebar Setup
 with st.sidebar:
-    st.markdown("### 🛠️ Configuration")
-    
-    # Allow user override if not set in secrets
-    openai_key_input = st.text_input(
-        "OpenAI API Key", 
-        value=openai_key_secret or "", 
-        type="password",
-        help="Required for claim extraction and verdict reasoning (GPT-4o Mini)."
-    )
-    tavily_key_input = st.text_input(
-        "Tavily API Key", 
-        value=tavily_key_secret or "", 
-        type="password",
-        help="Required for searching live web facts."
-    )
-    
-    # Save active keys
-    active_openai_key = openai_key_input.strip()
-    active_tavily_key = tavily_key_input.strip()
+    # Save active keys from secrets / backend configuration
+    active_openai_key = (openai_key_secret or "").strip()
+    active_tavily_key = (tavily_key_secret or "").strip()
     
     st.markdown("---")
     st.markdown("### 💡 How It Works")
